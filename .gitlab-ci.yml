@@ -1,0 +1,30 @@
+stages:
+  - build
+  - release
+
+before_script:
+  - export DOCKER_IMAGE_NAME=registry.gitlab.com/pantomath-io/docker-nginx-with-status
+
+docker_images:
+  stage: build
+  services:
+    - docker:dind
+  image: docker:latest
+  script:
+    - cd $CI_PROJECT_DIR
+    - echo $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin registry.gitlab.com
+    - docker build -t $DOCKER_IMAGE_NAME:$CI_COMMIT_REF_SLUG -f Dockerfile .
+    - docker push $DOCKER_IMAGE_NAME:$CI_COMMIT_REF_SLUG
+
+docker_tag:
+  stage: release
+  services:
+    - docker:dind
+  image: docker:latest
+  script:
+    - cd $CI_PROJECT_DIR
+    - echo $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin registry.gitlab.com
+    - docker pull $DOCKER_IMAGE_NAME:$CI_COMMIT_REF_SLUG
+    - docker tag $DOCKER_IMAGE_NAME:$CI_COMMIT_REF_SLUG $DOCKER_IMAGE_NAME:latest
+  only:
+    - master
